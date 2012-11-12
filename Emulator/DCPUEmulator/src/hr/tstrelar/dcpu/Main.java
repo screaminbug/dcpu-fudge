@@ -7,7 +7,7 @@ import java.io.IOException;
 public class Main {
 	
 	public static void main(String[] args) {
-		if (args[0] == null) returnError();
+		if (args.length == 0) returnError();
 		
 		short[] program = new short[0x10000];
 		int byteRead = 0;
@@ -36,7 +36,7 @@ public class Main {
 			System.out.println("No such file");
 			System.exit(-2);
 		} catch (IOException ioe) {
-			System.out.println("There was a problem with file IO");
+			System.out.println("There was a problem with file IO.");
 			System.exit(-3);
 		}
 		
@@ -46,7 +46,7 @@ public class Main {
 	}
 	
 	private static void returnError() {
-		System.out.println("Binary filename not specified. Exiting");
+		System.out.println("Binary filename not specified. Exiting...");
 		System.exit(-1);
 	}
 }

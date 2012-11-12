@@ -67,14 +67,14 @@ public class Dcpu {
 				retVal = gpRegs[pointer];
 			
 			// [register]
-			} else if (value >> 4 == 1) {
-				pointer = USHORT_MASK & gpRegs[0x8 & value];
+			} else if (value < DREG_BOUND) {
+				pointer = USHORT_MASK & gpRegs[value - 0x08];
 				modify = ModificationType.MEMORY;
 				retVal = memory[pointer];
 	        	
 	        // [register + next word]
-	        } else if (value >> 5 == 1) {
-	        	pointer = USHORT_MASK & (gpRegs[0x10 & value] + pc++);
+	        } else if (value < GP_REG_BOUND) {
+	        	pointer = USHORT_MASK & (gpRegs[value - 0x10] + pc++);
 	        	modify = ModificationType.MEMORY;
 	        	retVal = memory[pointer];
 	        	cycle++;
