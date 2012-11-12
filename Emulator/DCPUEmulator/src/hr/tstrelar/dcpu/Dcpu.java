@@ -26,6 +26,7 @@ public class Dcpu {
 	private short[] gpRegs = new short[GP_REGISTER_COUNT]; // A, B, C, X, Y, Z, I, J, in that order
 	private short sp, pc, ex, ia;
 	private long cycle;
+	private boolean skip;
 	
 	private int tempPointer;
 	private ModificationType modify;
@@ -34,9 +35,13 @@ public class Dcpu {
 		this.memory = memory;
 	}
 	
-	public void run() {
+	public void run() throws InterruptedException {
 		while (true) {
+			System.out.printf("Instruction: 0x%s\nA = %d\nB= %d\nC= %d\nX= %d\nY= %d\nZ= %d\nI= %d\nJ= %d\n", 
+					Integer.toHexString(memory[pc]), gpRegs[0], gpRegs[1], gpRegs[2], gpRegs[3], gpRegs[4], gpRegs[5], gpRegs[6], gpRegs[7]);
+			System.out.printf("SP = %d, PC = %d, EX = %d, IA = %d\n\n", sp, pc, ex, ia);
 			decodeInstruction(memory[pc++]);
+//			Thread.sleep(500);
 			cycle++;
 		}
 		
@@ -74,14 +79,15 @@ public class Dcpu {
 	        	
 	        // [register + next word]
 	        } else if (value < GP_REG_BOUND) {
-	        	pointer = USHORT_MASK & (gpRegs[value - 0x10] + pc++);
+	        	pointer = USHORT_MASK & (gpRegs[value - 0x10] + memory[USHORT_MASK & pc++]);
 	        	modify = ModificationType.MEMORY;
 	        	retVal = memory[pointer];
 	        	cycle++;
 
 	        // POP / PUSH
-	        } else if (value == PUPO_VAL) {
-	        	// POP / [SP++]
+	        	// NOTE: if skipping we must not modify SP
+	        } else if (!skip && value == PUPO_VAL) {
+	        	// POP / [SP++]   	
 	        	if (isValueA) {
 	        		modify = ModificationType.EMULATOR_ERROR; // POP can never be the target
 	        		retVal = memory[USHORT_MASK & sp++];
@@ -92,6 +98,7 @@ public class Dcpu {
 	        		modify = ModificationType.MEMORY;
 	        		retVal = 0; 
 	        	}
+	        	
 	        	
         	// [SP] / PEEK
 	        } else if (value == PEEK_VAL) {
@@ -123,7 +130,7 @@ public class Dcpu {
 	        
 	        // [next word]
 	        } else if (value == NEXTW_VAL) {
-	        	pointer = USHORT_MASK & memory[USHORT_MASK & pc++];
+	        	pointer = memory[USHORT_MASK & pc++];
 	        	modify = ModificationType.MEMORY;
 	        	retVal = memory[pointer];
 	        	cycle++;
@@ -156,44 +163,85 @@ public class Dcpu {
 		switch(opcode) {
 		case 0x00:
 			switch(bi) {
-				case 0x00:           break; case 0x01:jsrOp(ai); break; 
-				case 0x02:           break;	case 0x03:           break; 
-				case 0x04:           break; case 0x05:           break;
-				case 0x06:           break; case 0x07:           break; 
-				case 0x08:intOp(ai); break; case 0x09:iagOp(ai); break; 
-				case 0x0a:iasOp(ai); break; case 0x0b:rfiOp(ai); break;
-				case 0x0c:iaqOp(ai); break; case 0x0d:           break;
-				case 0x0e:           break;	case 0x0f:           break;
-				case 0x10:hwnOp(ai); break; case 0x11:hwqOp(ai); break;
-				case 0x12:hwiOp(ai); break; case 0x13:           break;
-				case 0x14:           break;	case 0x15:           break; 
-				case 0x16:           break; case 0x17:           break;	
-				case 0x18:           break; case 0x19:           break; 
-				case 0x1a:           break;	case 0x1b:           break; 
-				case 0x1c:           break; case 0x1d:           break;
-				case 0x1e:           break; case 0x1f:           break;			
+				case 0x00:notImpl(); break; 
+				case 0x01:jsrOp(ai); break; 
+				case 0x02:notImpl(); break;
+				case 0x03:notImpl(); break;
+				case 0x04:notImpl(); break; 
+				case 0x05:notImpl(); break;
+				case 0x06:notImpl(); break; 
+				case 0x07:notImpl(); break; 
+				case 0x08:intOp(ai); break; 
+				case 0x09:iagOp(ai); break; 
+				case 0x0a:iasOp(ai); break; 
+				case 0x0b:rfiOp(ai); break;
+				case 0x0c:iaqOp(ai); break; 
+				case 0x0d:notImpl(); break;
+				case 0x0e:notImpl(); break;	
+				case 0x0f:notImpl(); break;
+				case 0x10:hwnOp(ai); break; 
+				case 0x11:hwqOp(ai); break;
+				case 0x12:hwiOp(ai); break; 
+				case 0x13:notImpl(); break;
+				case 0x14:notImpl(); break;	
+				case 0x15:notImpl(); break; 
+				case 0x16:notImpl(); break; 
+				case 0x17:notImpl(); break;	
+				case 0x18:notImpl(); break; 
+				case 0x19:notImpl(); break; 
+				case 0x1a:notImpl(); break;	
+				case 0x1b:notImpl(); break; 
+				case 0x1c:notImpl(); break; 
+				case 0x1d:notImpl(); break;
+				case 0x1e:notImpl(); break; 
+				case 0x1f:notImpl(); break;			
 			}
 			break;
-			case 0x01:setOp(bi, ai); break;	case 0x02:addOp(bi, ai); break;	
-			case 0x03:subOp(bi, ai); break;	case 0x04:mulOp(bi, ai); break;	
-			case 0x05:mliOp(bi, ai); break;	case 0x06:divOp(bi, ai); break; 
-			case 0x07:dviOp(bi, ai); break;	case 0x08:modOp(bi, ai); break;	
-			case 0x09:mdiOp(bi, ai); break;	case 0x0a:andOp(bi, ai); break;	
-			case 0x0b:borOp(bi, ai); break;	case 0x0c:xorOp(bi, ai); break;	
-			case 0x0d:shrOp(bi, ai); break;	case 0x0e:asrOp(bi, ai); break;	
-			case 0x0f:shlOp(bi, ai); break;	case 0x10:ifbOp(bi, ai); break;	
-			case 0x11:ifcOp(bi, ai); break;	case 0x12:ifeOp(bi, ai); break;
-			case 0x13:ifnOp(bi, ai); break;	case 0x14:ifgOp(bi, ai); break;	
-			case 0x15:ifaOp(bi, ai); break;	case 0x16:iflOp(bi, ai); break;	
-			case 0x17:ifuOp(bi, ai); break;	case 0x18: 				 break;
-			case 0x19: 				 break;	case 0x1a:adxOp(bi, ai); break;	
-			case 0x1b:sbxOp(bi, ai); break;	case 0x1c:				 break; 
-			case 0x1d:				 break;	case 0x1e:stiOp(bi, ai); break;
+			case 0x01:setOp(bi, ai); break;	
+			case 0x02:addOp(bi, ai); break;	
+			case 0x03:subOp(bi, ai); break;	
+			case 0x04:mulOp(bi, ai); break;	
+			case 0x05:mliOp(bi, ai); break;	
+			case 0x06:divOp(bi, ai); break; 
+			case 0x07:dviOp(bi, ai); break;	
+			case 0x08:modOp(bi, ai); break;	
+			case 0x09:mdiOp(bi, ai); break;	
+			case 0x0a:andOp(bi, ai); break;	
+			case 0x0b:borOp(bi, ai); break;	
+			case 0x0c:xorOp(bi, ai); break;	
+			case 0x0d:shrOp(bi, ai); break;	
+			case 0x0e:asrOp(bi, ai); break;	
+			case 0x0f:shlOp(bi, ai); break;	
+			case 0x10:ifbOp(bi, ai); break;	
+			case 0x11:ifcOp(bi, ai); break;	
+			case 0x12:ifeOp(bi, ai); break;
+			case 0x13:ifnOp(bi, ai); break;	
+			case 0x14:ifgOp(bi, ai); break;	
+			case 0x15:ifaOp(bi, ai); break;	
+			case 0x16:iflOp(bi, ai); break;	
+			case 0x17:ifuOp(bi, ai); break;	
+			case 0x18:notImplBas();  break;
+			case 0x19:notImplBas();  break;
+			case 0x1a:adxOp(bi, ai); break;	
+			case 0x1b:sbxOp(bi, ai); break;	
+			case 0x1c:notImplBas();  break;
+			case 0x1d:notImplBas();  break;	
+			case 0x1e:stiOp(bi, ai); break;
 			case 0x1f:stdOp(bi, ai); break;
 		}
 	}
 	
 	
+
+	private void notImplBas() {
+		throw new RuntimeException("Encountered unknown basic opcode.");
+		
+	}
+
+	private void notImpl() {
+		throw new RuntimeException("Encountered unknown special opcode.");
+		
+	}
 
 	private void hwiOp(byte ai) {
 		
@@ -272,84 +320,111 @@ public class Dcpu {
 	private void ifuOp(byte bi, byte ai) {
 		short source = decodeValue(ai, true);
 		short target = decodeValue(bi, false);
-		doWrite(source);
+		
+		if (!skip && (target < source)) {
+			skip = false;
+		} else skip = true;	
 		
 	}
 
 	private void iflOp(byte bi, byte ai) {
 		short source = decodeValue(ai, true);
 		short target = decodeValue(bi, false);
-		doWrite(source);
+		
+		if (!skip && ((USHORT_MASK & target) < (USHORT_MASK & source))) {
+			skip = false;
+		} else skip = true;	
 		
 	}
 
 	private void ifaOp(byte bi, byte ai) {
 		short source = decodeValue(ai, true);
 		short target = decodeValue(bi, false);
-		doWrite(source);
+		
+		if (!skip && (target > source)) {
+			skip = false;
+		} else skip = true;	
 		
 	}
 
 	private void ifgOp(byte bi, byte ai) {
 		short source = decodeValue(ai, true);
 		short target = decodeValue(bi, false);
-		doWrite(source);
+		
+		if (!skip && ((USHORT_MASK & target) > (USHORT_MASK & source))) {
+			skip = false;
+		} else skip = true;	
 		
 	}
 
 	private void ifnOp(byte bi, byte ai) {
 		short source = decodeValue(ai, true);
 		short target = decodeValue(bi, false);
-		doWrite(source);
+		
+		if (!skip && (target != source)) {
+			skip = false;
+		} else skip = true;	
 		
 	}
 
 	private void ifeOp(byte bi, byte ai) {
 		short source = decodeValue(ai, true);
 		short target = decodeValue(bi, false);
-		doWrite(source);
+		
+		if (!skip && (target == source)) {
+			skip = false;
+		} else skip = true;	
 		
 	}
 
 	private void ifcOp(byte bi, byte ai) {
 		short source = decodeValue(ai, true);
 		short target = decodeValue(bi, false);
-		doWrite(source);
+		
+		if (!skip && (target & source) == 0) {
+			skip = false;
+		} else skip = true;	
 		
 	}
 
 	private void ifbOp(byte bi, byte ai) {
 		short source = decodeValue(ai, true);
 		short target = decodeValue(bi, false);
-		doWrite(source);
 		
+		if (!skip && (target & source) != 0) {
+			skip = false;
+		} else skip = true;	
 	}
 
 	private void shlOp(byte bi, byte ai) {
 		short source = decodeValue(ai, true);
 		short target = decodeValue(bi, false);
-		doWrite(source);
 		
+		target = (short) ((USHORT_MASK & source) << (USHORT_MASK & target));
+		if (doWrite(target)) {
+			ex = (short) ((target << source) >> 16);
+		}
 	}
 
 	private void asrOp(byte bi, byte ai) {
 		short source = decodeValue(ai, true);
 		short target = decodeValue(bi, false);
 		
-		target = (short) (source >>> (USHORT_MASK & target));
-		doWrite(source);
-		ex = (short) ((target << 16) >>> source);
-		
+		target = (short) (source >> (USHORT_MASK & target));
+		if (doWrite(target)) {
+			ex = (short) ((target << 16) >>> source);
+		}
+			
 	}
 
 	private void shrOp(byte bi, byte ai) {
 		short source = decodeValue(ai, true);
 		short target = decodeValue(bi, false);
 		
-		target = (short) ((USHORT_MASK & source) >>> (USHORT_MASK & target));
-		doWrite(source);
-		ex = (short) ((target << 16) >> source);
-		
+		target = (short) ((USHORT_MASK & source) >> (USHORT_MASK & target));
+		if (doWrite(target)) {
+			ex = (short) ((target << 16) >> source);
+		}	
 	}
 
 	private void xorOp(byte bi, byte ai) {
@@ -399,11 +474,13 @@ public class Dcpu {
 		
 		if (target != 0) {  
 			target = source / target;
-			doWrite((short) target);
-			ex = (short) (target << 16 / source);
+			if (doWrite((short) target)) {
+				ex = (short) (target << 16 / source);
+			}		
 		} else {
-			doWrite((short) 0);
-			ex = 0;
+			if (doWrite((short) 0)) {
+				ex = 0;
+			}		
 		}
 	}
 
@@ -413,11 +490,15 @@ public class Dcpu {
 		
 		if (target != 0) {  
 			target = (USHORT_MASK & source) / (USHORT_MASK & target);
-			doWrite((short) target);
-			ex = (short) (target << 16 / source);
+			if (doWrite((short) target)) {
+				ex = (short) (target << 16 / source);
+			}
+			
 		} else {
-			doWrite((short) 0);
-			ex = 0;
+			if (doWrite((short) 0)) {
+				ex = 0;
+			}
+			
 		}
 	}
 
@@ -426,8 +507,10 @@ public class Dcpu {
 		int target = decodeValue(bi, false);
 		
 		target *= source;
-		doWrite((short) target);
-		ex = (short) (target >> 16);
+		if (doWrite((short) target)) {
+			ex = (short) (target >> 16);
+		}
+		
 	}
 
 	private void mulOp(byte bi, byte ai) {
@@ -435,8 +518,10 @@ public class Dcpu {
 		int target = decodeValue(bi, false);
 		
 		target = (USHORT_MASK & source) * (USHORT_MASK & target);
-		doWrite((short) target);
-		ex = (short) (target >> 16);
+		if (doWrite((short) target)) {
+			ex = (short) (target >> 16);
+		}
+		
 		
 	}
 
@@ -445,10 +530,11 @@ public class Dcpu {
 		int target = decodeValue(bi, false);
 		
 		target -= USHORT_MASK & source;
-		doWrite((short) (USHORT_MASK & target));
-		if (target < 0) ex = -1; // 0xFFFF;
-		else ex = 0;
-		
+		if (doWrite((short) (USHORT_MASK & target))) {
+			if (target < 0) ex = -1; // 0xFFFF;
+			else ex = 0;
+		}
+				
 	}
 
 	private void addOp(byte bi, byte ai) {
@@ -456,9 +542,11 @@ public class Dcpu {
 		int target = decodeValue(bi, false);
 		
 		target += USHORT_MASK & source;
-		doWrite((short) (USHORT_MASK & target));
-		if (target < 0) ex = 1; 
-		else ex = 0;
+		if (doWrite((short) (USHORT_MASK & target))) {
+			if (target < 0) ex = 1; 
+			else ex = 0;
+		}
+		
 		
 	}
 
@@ -471,31 +559,35 @@ public class Dcpu {
 	}
 
 
-	private void doWrite(short value) {
-		switch(modify) {
-		case MEMORY:
-			memory[tempPointer] = value;
-			break;
-		case REGISTER:
-			gpRegs[tempPointer] = value;
-			break;
-		case PC:
-			pc = value;
-			break;
-		case SP:
-			sp = value;
-			break;
-		case EX:
-			ex = value;
-			break;
-		case NONE:
-			break; // in case we try to write to a literal we fail silently
-		case EMULATOR_ERROR:
-			throw new RuntimeException("!!!FATAL!!! B value read as POP. This can't be.");
-		default:
-			assert(false) : "Check Modification Type enum";
-			
+	private boolean doWrite(short value) {
+		boolean noSkip = !this.skip;
+		if (noSkip) {
+			switch(modify) {
+			case MEMORY:
+				memory[tempPointer] = value;
+				break;
+			case REGISTER:
+				gpRegs[tempPointer] = value;
+				break;
+			case PC:
+				pc = value;
+				break;
+			case SP:
+				sp = value;
+				break;
+			case EX:
+				ex = value;
+				break;
+			case NONE:
+				break; // in case we try to write to a literal we fail silently
+			case EMULATOR_ERROR:
+				throw new RuntimeException("!!!FATAL!!! B value read as POP. This can't be.");
+			default:
+				assert(false) : "Check Modification Type enum";
+			}
 		}
+		this.skip = false;
+		return noSkip;
 	}
 
 	

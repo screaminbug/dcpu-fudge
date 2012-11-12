@@ -6,7 +6,7 @@ import java.io.IOException;
 
 public class Main {
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws InterruptedException {
 		if (args.length == 0) returnError();
 		
 		short[] program = new short[0x10000];
