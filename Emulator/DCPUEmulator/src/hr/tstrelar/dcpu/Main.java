@@ -1,12 +1,15 @@
 package hr.tstrelar.dcpu;
 
+import hr.tstrelar.dcpu.hardware.GenericClock;
+
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 public class Main {
 	
-	public static void main(String[] args) throws InterruptedException {
+	public static void main(String[] args) throws InterruptedException, NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		if (args.length == 0) returnError();
 		
 		short[] program = new short[0x10000];
@@ -41,6 +44,7 @@ public class Main {
 		}
 		
 		Dcpu dcpu = new Dcpu(program);
+		dcpu.connectDevice(GenericClock.class);
 		dcpu.run();
 		
 	}
