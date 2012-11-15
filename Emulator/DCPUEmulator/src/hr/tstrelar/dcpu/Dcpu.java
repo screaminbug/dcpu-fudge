@@ -36,7 +36,7 @@ public class Dcpu {
 	private short sp, pc, ex, ia;
 	private long cycle;
 	private boolean isSkipping;
-	private long cyclesPerSecond = 1000;
+	private long cyclesPerSecond = 100000;
 	private StringBuilder log = new StringBuilder(50000);
 
 	private int tempPointer;
@@ -47,7 +47,11 @@ public class Dcpu {
 	private boolean queueInterrupts;
 	private Queue<Short> interruptQueue = new ArrayDeque<>();
 	private boolean caughtFire;
-	Random random = new Random(System.currentTimeMillis());
+	private Random random = new Random(System.currentTimeMillis());
+		
+    private Boolean isRunning = new Boolean(true);
+    private boolean canInterrupt = false;
+	private boolean interruptArrived;
 
 	public Dcpu(short[] memory) {
 		this.memory = memory;
@@ -74,8 +78,14 @@ public class Dcpu {
 			    
 	//			long before = System.nanoTime();
 	//			long cycleBefore = cycle;
-				decodeInstruction(memory[pc++]);
-				System.out.printf("A = 0x%s\nB = 0x%s\nC= 0x%s\nX= 0x%s\nY= 0x%s\nZ= 0x%s\nI= 0x%s\nJ= 0x%s\n", 
+				synchronized (isRunning) {
+					decodeInstruction(memory[pc++]);
+					if (interruptArrived && !isSkipping) {
+						isRunning = false;	
+						isRunning.notify();
+					}
+				}
+				System.out.printf("A = 0x%s\nB = 0x%s\nC = 0x%s\nX = 0x%s\nY = 0x%s\nZ = 0x%s\nI = 0x%s\nJ = 0x%s\n", 
 						Integer.toHexString(USHORT_MASK & gpRegs[0]), 
 								Integer.toHexString(USHORT_MASK & gpRegs[1]),
 										Integer.toHexString(USHORT_MASK & gpRegs[2]), 
@@ -122,24 +132,42 @@ public class Dcpu {
 
 	}
 
-	public void triggerInterrupt(Short message) {
-		if (message != null) {
+	public void handleInterrupt(Short message) {
+		if (message != null) {		
+			// Queue interrupt
 			if (queueInterrupts) {
 				interruptQueue.add(message);
 				if (interruptQueue.size() > 0xFF) {
 					caughtFire = true;
 				}
-			} else {
-				if (ia != 0) {
-					queueInterrupts = true;
-					decodeInstruction((short)(0x7301)); // SET PUSH PC
-					decodeInstruction((short)(0x6001)); // SET PUSH A
-					pc = ia;
-					cycle++;
-					
-					doWrite(message);
-					cycle++;
-				} 
+			// Trigger interrupt
+			} else if (ia != 0) {
+				interruptArrived = true;
+				queueInterrupts = true;
+				synchronized (isRunning) {
+					try {								
+						while (isRunning) {
+							isRunning.wait();
+						}
+						memory[USHORT_MASK & --sp] = pc; // SET PUSH PC
+						cycle++;
+						memory[USHORT_MASK & --sp] = gpRegs[0];
+						cycle++;
+						pc = ia;
+						cycle++;
+						
+						gpRegs[0] = message;
+						cycle++;
+						isRunning = true;
+						interruptArrived = false;
+						isRunning.notify();
+						
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				
 			}
 		}
 
@@ -202,7 +230,7 @@ public class Dcpu {
 			} else if (!isSkipping && value == PUPO_VAL) {
 				// POP / [SP++]   	
 				if (isValueA) {
-					modify = ModificationType.EMULATOR_ERROR; // POP can never be the target (unless if IAG POP, but assemblers should dissalow this)
+					modify = ModificationType.EMULATOR_ERROR; // POP can never be the target (unless if IAG POP and RFI POP, but assemblers should dissalow this)
 					retVal = memory[USHORT_MASK & sp++];
 				}
 				// PUSH / [--SP]
@@ -274,8 +302,10 @@ public class Dcpu {
 		byte bi     = (byte) (0b011111 & (word >>  5));
 		byte ai     = (byte) (0b111111 & (word >> 10));
 		
+		
 		if (!queueInterrupts && !isSkipping)
-             triggerInterrupt(interruptQueue.poll());
+			handleInterrupt(interruptQueue.poll());
+	
 		
 		if (caughtFire) {
 			memory[random.nextInt(0xFFFF)] = (short) random.nextInt(0xFFFF);
@@ -350,6 +380,7 @@ public class Dcpu {
 		case 0x1e:stiOp(bi, ai); break;
 		case 0x1f:stdOp(bi, ai); break;
 		}
+		
 	}
 
 	private void notImplBas() {
@@ -426,14 +457,21 @@ public class Dcpu {
 	}
 
 	private void rfiOp(byte ai) {
-		short target = decodeValue(ai, true);
-		if (doWrite(target)) cycle += 3;
+		decodeValue(ai, true);
+		if (!isSkipping) {
+			queueInterrupts = false;
+			gpRegs[0] = memory[USHORT_MASK & sp++];
+			pc = memory[USHORT_MASK & sp++];
+			cycle += 3;
+			
+		} else cycle++;
+		isSkipping = false;
 	}
 
 	private void intOp(byte ai) {
 		short source = decodeValue(ai, true);
 		if (!isSkipping) {
-			triggerInterrupt(source);		
+			handleInterrupt(source);		
 			// cycles added in triggerInterrupt method
 		} else {
 			isSkipping = false;

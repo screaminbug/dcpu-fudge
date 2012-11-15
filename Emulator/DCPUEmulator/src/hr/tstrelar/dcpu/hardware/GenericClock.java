@@ -1,20 +1,15 @@
 package hr.tstrelar.dcpu.hardware;
 
-import java.awt.event.ActionListener;
+import hr.tstrelar.dcpu.Dcpu;
+
 import java.util.Timer;
 import java.util.TimerTask;
-
-import hr.tstrelar.dcpu.Dcpu;
 
 public class GenericClock extends Device {
 	private int ticks;
 	private boolean interruptsOn;
-	private boolean clockOn;
-	private long delay;
 	private short message;
 	private Timer timer;
-	private TimerTask timerTask;
-
 	public GenericClock(Dcpu dcpu) {
 		super(dcpu);
 	}
@@ -50,7 +45,7 @@ public class GenericClock extends Device {
 				timer.schedule(new TimerTask() {
 					@Override
 					public void run() {
-						if (interruptsOn) getProcessor().triggerInterrupt(message);
+						if (interruptsOn) getProcessor().handleInterrupt(message);
 						ticks++;
 					}
 				}, delay);
