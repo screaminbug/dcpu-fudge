@@ -1,6 +1,8 @@
 package hr.tstrelar.dcpu;
 
 import hr.tstrelar.dcpu.hardware.GenericClock;
+import hr.tstrelar.dcpu.hardware.GenericKeyboard;
+import hr.tstrelar.dcpu.hardware.LEM1802;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -45,6 +47,8 @@ public class Main {
 		
 		Dcpu dcpu = new Dcpu(program);
 		dcpu.connectDevice(GenericClock.class);
+		dcpu.connectDevice(GenericKeyboard.class);
+		dcpu.connectDevice(LEM1802.class);
 		dcpu.run();
 		
 	}

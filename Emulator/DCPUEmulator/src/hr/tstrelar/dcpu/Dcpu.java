@@ -72,10 +72,10 @@ public class Dcpu {
 			long instructionsToRun = 256;
 			while ((instructionsToRun--) >= 0) {
 				System.out.printf("Instruction: 0x%s\n", 
-						Integer.toHexString(USHORT_MASK & memory[pc]));
+						Integer.toHexString(USHORT_MASK & memory[USHORT_MASK & pc]));
 			    
 
-				decodeInstruction(memory[pc++]);
+				decodeInstruction(memory[USHORT_MASK & pc++]);
 				if (!isSkipping && isInterrupted) {
 					executeInterrupt();
 				}
@@ -116,6 +116,13 @@ public class Dcpu {
 		}
 
 	}
+	
+	public void perFormDump(int pointer, short data) {
+		memory[USHORT_MASK & pointer] = data;
+		cycle++;
+	}
+	
+	
 
 	public synchronized void handleInterrupt(Short message) {
 		if (message != null) {		
@@ -136,7 +143,6 @@ public class Dcpu {
 	}
 
 	private void executeInterrupt() {
-		System.out.println(Thread.currentThread().getName());
 		memory[USHORT_MASK & --sp] = pc; // SET PUSH PC
 		cycle++;
 		memory[USHORT_MASK & --sp] = gpRegs[0];
@@ -150,9 +156,11 @@ public class Dcpu {
 
 	private void setHardwareInfo(int deviceNr) {
 		if ((USHORT_MASK & deviceNr) >= devices.size()) {
-			throw new RuntimeException("Attempted to send a hardware interrupt to a non-existing device");
+			handleError("Attempted to query a non-existing device");
+			return;
 		}
-		Device dev = devices.get(deviceNr);
+		
+		Device dev = devices.get(USHORT_MASK & deviceNr);
 		int hwID = dev.getID();
 		int man = dev.getManufacturer();
 		gpRegs[0] = (short) hwID;
@@ -278,7 +286,33 @@ public class Dcpu {
 		byte ai     = (byte) (0b111111 & (word >> 10));
 			
 		if (caughtFire) {
-			memory[random.nextInt(0xFFFF)] = (short) random.nextInt(0xFFFF);
+			System.out.println("I'm on fire!!!");
+			short randomValue = (short) random.nextInt(0xFFFF);
+			switch (random.nextInt(5)) {
+				case 0: 
+					gpRegs[random.nextInt(7)] = randomValue;
+					break;
+				
+				case 1:
+					sp = randomValue;
+					break;
+				
+				case 2:
+					pc = randomValue;
+					break;
+					
+				case 3:
+					ex = randomValue;
+					break;
+					
+				case 4:
+					ia = randomValue;
+					break;
+					
+				case 5:
+					memory[random.nextInt(0xFFFF)] = randomValue;
+					break;
+			}
 		}
 
 		switch(opcode) {
@@ -354,20 +388,44 @@ public class Dcpu {
 	}
 
 	private void notImplBas() {
-		throw new RuntimeException("Encountered unknown basic opcode.");
+		handleError("Encountered unknown basic opcode.");
 
 	}
 
 	private void notImpl() {
-		throw new RuntimeException("Encountered unknown special opcode.");
+		handleError("Encountered unknown special opcode.");
 
+	}
+	
+	private void handleError(String message) {
+		pc = sp = ia = ex = 0;
+		System.out.println();
+		System.out.println("************************************************");
+		System.out.println(message);
+		System.out.println("RESETING REGISTERS!!!");
+		if (caughtFire) {
+			System.out.println("!!!Putting out fire!!! (with gasoline)");
+			Short interrupt = interruptQueue.poll();
+			interruptQueue.clear();
+			interruptQueue.add(interrupt);			
+			caughtFire = false;
+		}
+		System.out.println("************************************************");
+		System.out.println();
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	private void hwiOp(byte ai) {
 		short device = decodeValue(ai, true);
 		if (!isSkipping) {
 			if ((USHORT_MASK & device) >= devices.size()) {
-				throw new RuntimeException("Attempted to send a hardware interrupt to a non-existing device");
+				handleError("Attempted to send a hardware interrupt to a non-existing device.");
+				return;
 			}
 			cycle += 4;
 			devices.get(device).interrupt();		
@@ -816,7 +874,7 @@ public class Dcpu {
 			case NONE:
 				break; // in case we try to write to a literal we fail silently
 			case EMULATOR_ERROR:
-				throw new RuntimeException("Invalid instruction at PC = " + Integer.toHexString(USHORT_MASK & --pc) + ", " + Integer.toHexString(USHORT_MASK & memory[pc]));
+				throw new RuntimeException("Invalid instruction at PC = " + Integer.toHexString(USHORT_MASK & --pc) + ", " + Integer.toHexString(USHORT_MASK & memory[USHORT_MASK & pc]));
 			default:
 				assert(false) : "Check Modification Type enum";
 			}

@@ -42,15 +42,11 @@ public class GenericClock extends Device {
 					timer.cancel();
 				}
 				timer = new Timer(true);
-				timer.schedule(new TimerTask() {
-					@Override
-					public void run() {
-						if (interruptsOn) getProcessor().handleInterrupt(message);
-						ticks++;
-					}
-				}, delay, delay);
+				timer.schedule(new InterruptExecutor(), delay, delay);
 			} else {
-				timer.cancel();
+				if (timer != null) {
+					timer.cancel();
+				}
 			}
 			break;
 		case 1:
@@ -62,6 +58,20 @@ public class GenericClock extends Device {
 				interruptsOn = true;
 			} else interruptsOn = false;
 		}
+	}
+	
+	private class InterruptExecutor extends TimerTask {
+		@Override
+		public void run() {
+			if (interruptsOn) getProcessor().handleInterrupt(message);
+			ticks++;			
+		}
+		
+	}
+
+	@Override
+	public String getFriendlyName() {
+		return("Generic Clock");
 	}
 
 }
