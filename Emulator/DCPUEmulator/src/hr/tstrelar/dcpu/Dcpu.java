@@ -49,9 +49,7 @@ public class Dcpu {
 	private boolean caughtFire;
 	private Random random = new Random(System.currentTimeMillis());
 		
-    private Boolean isRunning = new Boolean(true);
-    private boolean canInterrupt = false;
-	private boolean interruptArrived;
+    private Boolean isInterrupted = new Boolean(false);
 
 	public Dcpu(short[] memory) {
 		this.memory = memory;
@@ -76,15 +74,12 @@ public class Dcpu {
 				System.out.printf("Instruction: 0x%s\n", 
 						Integer.toHexString(USHORT_MASK & memory[pc]));
 			    
-	//			long before = System.nanoTime();
-	//			long cycleBefore = cycle;
-				synchronized (isRunning) {
-					decodeInstruction(memory[pc++]);
-					if (interruptArrived && !isSkipping) {
-						isRunning = false;	
-						isRunning.notify();
-					}
+
+				decodeInstruction(memory[pc++]);
+				if (!isSkipping && isInterrupted) {
+					executeInterrupt();
 				}
+
 				System.out.printf("A = 0x%s\nB = 0x%s\nC = 0x%s\nX = 0x%s\nY = 0x%s\nZ = 0x%s\nI = 0x%s\nJ = 0x%s\n", 
 						Integer.toHexString(USHORT_MASK & gpRegs[0]), 
 								Integer.toHexString(USHORT_MASK & gpRegs[1]),
@@ -95,17 +90,7 @@ public class Dcpu {
 																		Integer.toHexString(USHORT_MASK & gpRegs[6]), 
 																				Integer.toHexString(USHORT_MASK & gpRegs[7]));
 				System.out.printf("SP = %d, PC = %d, EX = %d, IA = %d\n\n", sp, pc, ex, ia);
-	//			long actualTimeTook = System.nanoTime() - before;
-	//			log.append("This instruction spent " + (cycle - cycleBefore) + " cycles and took " + actualTimeTook + " nanoseconds.\n");
-	//			long shouldTook = 1000000000 * (cycle - cycleBefore) / cyclesPerSecond;
-	//			log.append("It should of took " + shouldTook + " nanoseconds\n");
-	//			int adjustment = (int) (shouldTook - actualTimeTook);
-	//			if ((adjustment) > 0) {
-	//				if (adjustment > 999999) Thread.sleep(adjustment/1000000);
-	//				else Thread.sleep(0, adjustment);
-	//			}
-	//			long afterAdj = System.nanoTime() - before;
-	//			log.append("After adjustment of " + adjustment + " ns, the actual time between instruction is " + afterAdj + " nanoseconds.\n\n");
+	//			
 			}
 			long timeTook = System.nanoTime() - startTime;
 			int cycles = (int) (cycle - cyclesBefore);
@@ -127,12 +112,12 @@ public class Dcpu {
 			log.append("\nAfter adjustment took: " + (System.nanoTime() - startTime));
 			log.append("\nThe average frequency after adjustment is: " + cycles * 1000000000L / (double)(System.nanoTime() - startTime));
 			
-			System.out.println(log);
+			//System.out.println(log);
 		}
 
 	}
 
-	public void handleInterrupt(Short message) {
+	public synchronized void handleInterrupt(Short message) {
 		if (message != null) {		
 			// Queue interrupt
 			if (queueInterrupts) {
@@ -142,35 +127,25 @@ public class Dcpu {
 				}
 			// Trigger interrupt
 			} else if (ia != 0) {
-				interruptArrived = true;
+				interruptQueue.add(message);
+				isInterrupted = true;
 				queueInterrupts = true;
-				synchronized (isRunning) {
-					try {								
-						while (isRunning) {
-							isRunning.wait();
-						}
-						memory[USHORT_MASK & --sp] = pc; // SET PUSH PC
-						cycle++;
-						memory[USHORT_MASK & --sp] = gpRegs[0];
-						cycle++;
-						pc = ia;
-						cycle++;
-						
-						gpRegs[0] = message;
-						cycle++;
-						isRunning = true;
-						interruptArrived = false;
-						isRunning.notify();
-						
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-				
 			}
 		}
 
+	}
+
+	private void executeInterrupt() {
+		System.out.println(Thread.currentThread().getName());
+		memory[USHORT_MASK & --sp] = pc; // SET PUSH PC
+		cycle++;
+		memory[USHORT_MASK & --sp] = gpRegs[0];
+		cycle++;
+		pc = ia;
+		cycle++;
+		gpRegs[0] = interruptQueue.poll();
+		cycle++;
+		isInterrupted = false;
 	}
 
 	private void setHardwareInfo(int deviceNr) {
@@ -301,12 +276,7 @@ public class Dcpu {
 		byte opcode = (byte) (0b011111 &  word);
 		byte bi     = (byte) (0b011111 & (word >>  5));
 		byte ai     = (byte) (0b111111 & (word >> 10));
-		
-		
-		if (!queueInterrupts && !isSkipping)
-			handleInterrupt(interruptQueue.poll());
-	
-		
+			
 		if (caughtFire) {
 			memory[random.nextInt(0xFFFF)] = (short) random.nextInt(0xFFFF);
 		}

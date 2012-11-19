@@ -48,7 +48,7 @@ public class GenericClock extends Device {
 						if (interruptsOn) getProcessor().handleInterrupt(message);
 						ticks++;
 					}
-				}, delay);
+				}, delay, delay);
 			} else {
 				timer.cancel();
 			}
