@@ -32,12 +32,14 @@ public class GenericClock extends Device {
 	@Override
 	public void interrupt() {
 		int delay = 0;
+		
 		switch (getProcessor().gpRegs[0]) {
 		case 0:
 			ticks = 0;
-			if (getProcessor().gpRegs[1] != 0) {
+			int b = getProcessor().gpRegs[1];
+			if (b != 0) {
 				
-				delay = 1000 / (60 / getProcessor().gpRegs[1]);
+				delay = (int) (1000 / (60D / b));
 				if (timer != null) {
 					timer.cancel();
 				}
