@@ -11,7 +11,6 @@ public class GenericKeyboard extends Keyboard {
 	
 	private Queue<Short> buffer = new ArrayDeque<>();
 	private Short intMessage;
-	private Short currentKey;
 	private boolean repeatedKey;
 	
 	public GenericKeyboard(Dcpu dcpu) {
@@ -38,25 +37,24 @@ public class GenericKeyboard extends Keyboard {
 
 	@Override
 	public void interrupt() {
+		Short key = buffer.poll();
 		switch(getProcessor().gpRegs[0]) {
 		case 0:
 			buffer.clear();
 			break;
 		case 1:
-			Short key = buffer.poll();
-			getProcessor().gpRegs[3] = key != null ? key : 0;
-			
+			getProcessor().gpRegs[2] = key != null ? key : 0;
 			break;
 		case 2:
-			if (currentKey != null && getProcessor().gpRegs[2] == currentKey) {
-				getProcessor().gpRegs[3] = 1;
+			if (key != null && getProcessor().gpRegs[2] == key) {
+				getProcessor().gpRegs[2] = 1;
 			} else {
-				getProcessor().gpRegs[3] = 0;
+				getProcessor().gpRegs[2] = 0;
 			}
 			break;
 		case 3:
-			if (getProcessor().gpRegs[2] != 0) {
-				intMessage = getProcessor().gpRegs[2];
+			if (getProcessor().gpRegs[1] != 0) {
+				intMessage = getProcessor().gpRegs[1];
 			} else intMessage = null;
 			break;
 			
@@ -70,7 +68,7 @@ public class GenericKeyboard extends Keyboard {
 				getProcessor().handleInterrupt(intMessage);
 			} else {
 				buffer.add(keyCode);
-			}
+			}		
 		}
 		System.out.println(keyCode);
 		
