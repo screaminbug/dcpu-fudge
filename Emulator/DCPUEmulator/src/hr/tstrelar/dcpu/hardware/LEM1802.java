@@ -3,6 +3,9 @@ package hr.tstrelar.dcpu.hardware;
 import hr.tstrelar.dcpu.Dcpu;
 import hr.tstrelar.dcpu.gui.MonitorWindow;
 
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.util.Arrays;
@@ -66,25 +69,24 @@ public class LEM1802 extends Monitor {
 							0x0555,	0x055f,	0x05f5,	0x05ff,
 							0x0f55, 0x0f5f,	0x0ff5,	0x0fff			
 	};
-	
-	private final BufferedImage[] screen = new BufferedImage[32*12];
-
-	Thread cellGenerator; 
 		
 	private int memStart;
 	private int customFontMemStart;
 	private int customPaletteMemStart;
 	
-	private int borderColor;
+	private int borderColor = 11;
 	
 	private MonitorWindow window;
 	
 	private volatile boolean blinkOn;
 	private Timer blinkTimer;
 	
+	private short[] vram;
+	
 
 	public LEM1802(Dcpu dcpu) {
 		super(dcpu);
+		vram = getProcessor().getMemory();
 	}
 
 	@Override
@@ -133,52 +135,85 @@ public class LEM1802 extends Monitor {
 		}
 	}
 	
-	public BufferedImage[] getScreen() {
-		return screen;
+	@Override
+	public String getFriendlyName() {
+		return("LEM1802");
+	}
+
+	@Override
+	public int getXSize() {
+		return X_RESOLUTION;
+	}
+
+	@Override
+	public int getYSize() {
+		return Y_RESOLUTION;
 	}
 	
+    @Override
+	public BufferedImage getCell(int position) {
+		int memValue = vram[position + memStart];
+		int index = (0x7F & memValue) << 1;
+		int[] background = getRgbFromPalette(0xF & (memValue >> 8));
+		int[] foreground = getRgbFromPalette(0xF & (memValue >> 12));
+		boolean isBlinking = ((memValue >> 7) & 1) == 1 ? true : false;
+		
+		short[] fontRom;
+		if (customFontMemStart == 0) fontRom = builtInFont;
+		else fontRom = Arrays.copyOfRange(getProcessor().getMemory(), customFontMemStart, customFontMemStart + 256);
+		
+		int[] col = new int[4];
+		col[0]  = fontRom[index]   >> 8;
+		col[2]  = fontRom[index+1] >> 8;
+		col[1]  = fontRom[index]   & 0xFF;
+		col[3]  = fontRom[index+1] & 0xFF;
+				
+		BufferedImage ret = new BufferedImage(4, 8, BufferedImage.TYPE_INT_ARGB);
+		WritableRaster raster = ret.getRaster();
+		boolean show = !isBlinking || (isBlinking && blinkOn);
+		int k = 0;
+		for (int j = 0; j < 8; j++) {
+			for (int i = 0; i < 4; i++) {
+				if ((((col[i] >> k) & 1)  == 1) && show) {
+					raster.setPixel(i, j, foreground);
+				} else {
+					raster.setPixel(i, j, background);
+				}
+			}
+			k++;
+		}
+		
+		return ret;
+	}
+    
+    @Override
+	public Color getBorderColor() {
+    	int[] colorValues = getRgbFromPalette(borderColor);
+		return new Color(colorValues[0], colorValues[1], colorValues[2], 0xFF);
+	}
+		
 	private void bootScreen(final short b) {	
 		// set the video ram
 		
-		try {
-			if (b != 0) {
-				// screen was off
-								
-				if (memStart == 0) {
-					blinkTimer = new Timer(true);
-					blinkTimer.schedule(new Blinker(), 700, 700);
-					System.out.println("Turning on the screen");
-					System.out.println(memStart +  " B reg = 0x" + Integer.toHexString(0xFFFF&b));
-					window = MonitorWindow.instance(this);		
-					cellGenerator = new Thread(new Runnable() {
-						
-						@Override
-						public void run() {
-							while(!Thread.currentThread().isInterrupted()) {
-								for(int i = 0; i < 384; i++) {
-									screen[i] = getCell(getProcessor().getMemory()[i+ (int)(memStart)]);
-									
-								}
-							}
+		if (b != 0) {
+			// screen was off
 							
-						}
-					});		
-					cellGenerator.start();
-				}
-				memStart = 0xFFFF & b;
-									
-
-				
-			// disconnect screen
-			} else {
-				System.out.println("Monitor disconnecting");
-				MonitorWindow.destroy();
-				cellGenerator.interrupt();
-				cellGenerator.join();
+			if (memStart == 0) {
+				blinkTimer = new Timer(true);
+				blinkTimer.schedule(new Blinker(), 500, 500);
+				System.out.println("Turning on the screen");
+				System.out.println(memStart +  " B reg = 0x" + Integer.toHexString(0xFFFF&b));
+				window = MonitorWindow.instance(this);
 			}
-		} catch (InterruptedException ex) {
-			System.out.println("Cell generator was interrupted");
+			memStart = 0xFFFF & b;
+							
+		// disconnect screen
+		} else {
+			System.out.println("Monitor disconnecting");
+			if (window != null) MonitorWindow.destroy();
+			memStart = 0;
 		}
+		
 		
 	}
 	
@@ -204,82 +239,14 @@ public class LEM1802 extends Monitor {
 		
 		return new int[] {red, green, blue, 0xFF};
 	}
-	
-	private BufferedImage getCell(int memValue) {
-		int index = (0x7F & memValue) << 1;
-		int[] background = getRgbFromPalette(0xF & (memValue >> 8));
-		int[] foreground = getRgbFromPalette(0xF & (memValue >> 12));
-		boolean isBlinking = ((memValue >> 7) & 1) == 1 ? true : false;
 		
-		short[] fontRom;
-		if (customFontMemStart == 0) fontRom = builtInFont;
-		else fontRom = Arrays.copyOfRange(getProcessor().getMemory(), customFontMemStart, customFontMemStart + 256);
-		int[] col = new int[4];
-//		try {
-		col[0]  = fontRom[index]   >> 8;
-		col[2]  = fontRom[index+1] >> 8;
-		col[1]  = fontRom[index]   & 0xFF;
-		col[3]  = fontRom[index+1] & 0xFF;
-//		} catch (ArrayIndexOutOfBoundsException ex) {
-//			System.out.println("Error accessing font ROM.\n");
-//			System.out.print(String.format("Custom font memory pointer = 0x%s\n"));
-//		    System.out.println("Dump:");
-//			int i=0;
-//			for (short c : fontRom) {
-//				System.out.println(String.format("[%d]0x%s", i++, Integer.toHexString(c)));
-//			}
-//			System.exit(1);
-//		}
-				
-		BufferedImage ret = new BufferedImage(4, 8, BufferedImage.TYPE_INT_ARGB);
-		WritableRaster raster = ret.getRaster();
-		int k = 0;
-		for (int j = 0; j < 8; j++) {
-			for (int i = 0; i < 4; i++)
-				if (isBlinking && blinkOn) {
-					if (((col[i] >> k) & 1)  == 1) {
-						raster.setPixel(i, j, foreground);
-					} else {
-						raster.setPixel(i, j, background);
-					}
-				} else if (isBlinking && !blinkOn) {
-					raster.setPixel(i, j, background);
-				} else {
-					if (((col[i] >> k) & 1)  == 1) {
-						raster.setPixel(i, j, foreground);
-					} else {
-						raster.setPixel(i, j, background);
-					}
-				}
-				
-				k++;
-		}
-		
-		return ret;
-	}
-			
-	@Override
-	public String getFriendlyName() {
-		return("LEM1802");
-	}
-
-	@Override
-	public int getXSize() {
-		return X_RESOLUTION;
-	}
-
-	@Override
-	public int getYSize() {
-		return Y_RESOLUTION;
-	}
-	
 	class Blinker extends TimerTask {
 	
 		@Override
 		public void run() {
 			if (blinkOn) {
 				try {
-					Thread.sleep(150);
+					Thread.sleep(100);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -290,6 +257,8 @@ public class LEM1802 extends Monitor {
 			
 		}
 	}
+
+	
 
 	
 
