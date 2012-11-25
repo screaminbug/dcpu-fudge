@@ -24,11 +24,10 @@ public class MonitorWindow extends JFrame {
 	private static final long serialVersionUID = -8968538982081989471L;
 	private static final int LEFT_RIGHT_BORDER_SIZE = 128;
 	private static final int TOP_BOTTOM_BORDER_SIZE = 128;
-	private static final int SCALE_FACTOR = 5;
+	private static final int SCALE_FACTOR = 10;
 	private static MonitorWindow mWindow;
 	private static Monitor monitor;
 	
-
 	private BufferedImage img;
 
 	private final Timer screenTimer = new Timer(32, new BackDrawer());
@@ -127,7 +126,7 @@ public class MonitorWindow extends JFrame {
 			BufferedImage before = img;
 			BufferedImage after = new BufferedImage(imgWidth, imgHeight, BufferedImage.TYPE_INT_ARGB);
 			AffineTransform at = new AffineTransform();
-			at.scale(5.0, 5.0);
+			at.scale(SCALE_FACTOR, SCALE_FACTOR);
 			AffineTransformOp scaleOp = 
 			   new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
 			after = scaleOp.filter(before, after);
