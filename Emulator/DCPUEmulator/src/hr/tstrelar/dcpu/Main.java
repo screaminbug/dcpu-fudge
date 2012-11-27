@@ -14,7 +14,7 @@ public class Main {
 	public static void main(String[] args) throws InterruptedException, NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		if (args.length == 0) returnError();
 		
-		short[] program = new short[0x10000];
+		int[] program = new int[0x10000];
 		int byteRead = 0;
 		boolean isUpper = true;
 		int i = 0;

@@ -8,7 +8,7 @@ import java.util.TimerTask;
 public class GenericClock extends Device {
 	private int ticks;
 	private boolean interruptsOn;
-	private short message;
+	private int message;
 	private Timer timer;
 	public GenericClock(Dcpu dcpu) {
 		super(dcpu);
@@ -39,7 +39,7 @@ public class GenericClock extends Device {
 			int b = getProcessor().gpRegs[1];
 			if (b != 0) {
 				
-				delay = (int) (1000 / (60D / b));
+				delay = (int) (1000 / (60D / (0xFFFF&b)));
 				if (timer != null) {
 					timer.cancel();
 				}

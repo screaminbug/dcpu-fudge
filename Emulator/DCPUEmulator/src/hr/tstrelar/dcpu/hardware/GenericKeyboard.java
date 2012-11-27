@@ -10,7 +10,7 @@ import hr.tstrelar.dcpu.gui.KeyboardWindow;
 public class GenericKeyboard extends Keyboard {
 	
 	private Queue<Short> buffer = new ArrayDeque<>();
-	private Short intMessage;
+	private Integer intMessage;
 	private boolean repeatedKey;
 	
 	public GenericKeyboard(Dcpu dcpu) {
@@ -76,18 +76,18 @@ public class GenericKeyboard extends Keyboard {
 
 	@Override
 	public void handleKeyDown(KeyEvent keyEvent) {
-		if (!repeatedKey && keyEvent.getKeyCode() != KeyEvent.VK_UNDEFINED) {
+		//if (!repeatedKey) {// && keyEvent.getKeyCode() != KeyEvent.VK_UNDEFINED) {
 			handleKey(decodeKeyCode(keyEvent));
 			repeatedKey = true;
-		}
+		//}
 				
 	}
 	@Override
 	public void handleKeyUp(KeyEvent keyEvent) {
-		if (repeatedKey) {
-			handleKey(decodeKeyCode(keyEvent));
+		//if (repeatedKey) {
+			//handleKey(decodeKeyCode(keyEvent));
 			repeatedKey = false;
-		}
+		//}
 		
 	}
 
