@@ -18,5 +18,4 @@ public abstract class Device {
 	public abstract int getManufacturer();
 	public abstract int getVersion();
 	public abstract void interrupt();
-	public abstract String getFriendlyName();
 }

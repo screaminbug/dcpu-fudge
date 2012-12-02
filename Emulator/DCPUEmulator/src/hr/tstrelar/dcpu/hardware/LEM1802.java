@@ -136,7 +136,7 @@ public class LEM1802 extends Monitor {
 	}
 	
 	@Override
-	public String getFriendlyName() {
+	public String toString() {
 		return("LEM1802");
 	}
 

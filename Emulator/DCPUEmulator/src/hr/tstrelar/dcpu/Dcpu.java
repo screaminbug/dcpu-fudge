@@ -14,8 +14,7 @@ import org.omg.CORBA.UShortSeqHolder;
 
 
 public class Dcpu {
-	public static final int USHORT_MASK 	  = 0xFFFF; // bitmask for artificially creating unsigned ints (converting signed ints to signed ints)
-	// this must be done every time we reference the memory (dereferencing pointer) and for every unsigned operation
+	public static final int USHORT_MASK 	  = 0xFFFF; 
 
 	public static final int GP_REGISTER_COUNT  = 0x08; // we currently have 8 general purpose registers -- A, B, C, X, Y, Z, I, J
 	public static final int MEMORY_CAPACITY    = 0x10000; // 65536 words
@@ -72,10 +71,10 @@ public class Dcpu {
 		while (true) {
 			long startTime = System.nanoTime();
 			long cyclesBefore = cycle;
-			long instructionsToRun = 256;
+			long instructionsToRun = 1024;
 			while ((instructionsToRun--) >= 0) {
-				System.out.printf("Instruction: 0x%s\n", 
-						Integer.toHexString(USHORT_MASK & memory[USHORT_MASK & pc]));
+//				System.out.printf("Instruction: 0x%s\n", 
+//						Integer.toHexString(USHORT_MASK & memory[USHORT_MASK & pc]));
 			    
 
 				decodeInstruction(memory[USHORT_MASK & pc++]);
@@ -83,16 +82,16 @@ public class Dcpu {
 					executeInterrupt();
 				}
 
-				System.out.printf("A = 0x%s\nB = 0x%s\nC = 0x%s\nX = 0x%s\nY = 0x%s\nZ = 0x%s\nI = 0x%s\nJ = 0x%s\n", 
-						Integer.toHexString(USHORT_MASK & gpRegs[0]), 
-								Integer.toHexString(USHORT_MASK & gpRegs[1]),
-										Integer.toHexString(USHORT_MASK & gpRegs[2]), 
-												Integer.toHexString(USHORT_MASK & gpRegs[3]), 
-														Integer.toHexString(USHORT_MASK & gpRegs[4]), 
-																Integer.toHexString(USHORT_MASK & gpRegs[5]), 
-																		Integer.toHexString(USHORT_MASK & gpRegs[6]), 
-																				Integer.toHexString(USHORT_MASK & gpRegs[7]));
-				System.out.printf("SP = %d, PC = %d, EX = %d, IA = %d\n\n", sp, pc, ex, ia);
+//				System.out.printf("A = 0x%s\nB = 0x%s\nC = 0x%s\nX = 0x%s\nY = 0x%s\nZ = 0x%s\nI = 0x%s\nJ = 0x%s\n", 
+//						Integer.toHexString(USHORT_MASK & gpRegs[0]), 
+//								Integer.toHexString(USHORT_MASK & gpRegs[1]),
+//										Integer.toHexString(USHORT_MASK & gpRegs[2]), 
+//												Integer.toHexString(USHORT_MASK & gpRegs[3]), 
+//														Integer.toHexString(USHORT_MASK & gpRegs[4]), 
+//																Integer.toHexString(USHORT_MASK & gpRegs[5]), 
+//																		Integer.toHexString(USHORT_MASK & gpRegs[6]), 
+//																				Integer.toHexString(USHORT_MASK & gpRegs[7]));
+//				System.out.printf("SP = %d, PC = %d, EX = %d, IA = %d\n\n", sp, pc, ex, ia);
 	//			
 			}
 			long timeTook = System.nanoTime() - startTime;
@@ -104,18 +103,18 @@ public class Dcpu {
 				adjustmentMili = adjustmentNano / 1000000L;
 				adjustmentNano = 0;
 			}
-			log.append("\n\n\nThe average frequency is: " + cycles * 1000000000L / timeTook);
-			log.append("\nTime took: " + timeTook);
-			log.append("\nAdjustment: " + adjustmentMili + " ms" + " and " + adjustmentNano + " ns");
-			log.append("\nCycles: " + cycles);
-			log.append("\nShould took: " + shouldTook);
+//			log.append("\n\n\nThe average frequency is: " + cycles * 1000000000L / timeTook);
+//			log.append("\nTime took: " + timeTook);
+//			log.append("\nAdjustment: " + adjustmentMili + " ms" + " and " + adjustmentNano + " ns");
+//			log.append("\nCycles: " + cycles);
+//			log.append("\nShould took: " + shouldTook);
 			
 			
 			if (adjustmentMili > 0 || adjustmentNano > 0) Thread.sleep(adjustmentMili, (int) adjustmentNano);
-			log.append("\nAfter adjustment took: " + (System.nanoTime() - startTime));
-			log.append("\nThe average frequency after adjustment is: " + cycles * 1000000000L / (double)(System.nanoTime() - startTime));
-			
-			//System.out.println(log);
+//			log.append("\nAfter adjustment took: " + (System.nanoTime() - startTime));
+//			log.append("\nThe average frequency after adjustment is: " + cycles * 1000000000L / (double)(System.nanoTime() - startTime));
+//			
+//			System.out.println(log);
 		}
 
 	}
@@ -428,7 +427,8 @@ public class Dcpu {
 		if (!isSkipping) {
 			if ((USHORT_MASK & device) >= devices.size()) {
 				handleError("Attempted to send a hardware interrupt to a non-existing device.");
-				return;
+				
+				System.exit(-1);//return;
 			}
 			cycle += 4;
 			devices.get(device).interrupt();		
@@ -553,7 +553,7 @@ public class Dcpu {
 		int source = decodeValue(ai, true);
 		int target = decodeValue(bi, false);
 
-		target = USHORT_MASK & target - USHORT_MASK & source + USHORT_MASK & ex;
+		target = (USHORT_MASK & target) - (USHORT_MASK & source) + (USHORT_MASK & ex);
 
 		if (doWrite((int) (USHORT_MASK & target))) {
 			if (target < 0) {
@@ -573,7 +573,7 @@ public class Dcpu {
 		int source = decodeValue(ai, true);
 		int target = decodeValue(bi, false);
 
-		target = USHORT_MASK & target + USHORT_MASK & source + USHORT_MASK & ex;
+		target = (USHORT_MASK & target) + (USHORT_MASK & source) + (USHORT_MASK & ex);
 
 		if (doWrite(USHORT_MASK & target)) {
 			if (target > USHORT_MASK) {
@@ -584,8 +584,8 @@ public class Dcpu {
 }
 
 	private void ifuOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		short source = (short) decodeValue(ai, true);
+		short target = (short) decodeValue(bi, false);
 
 		if (!isSkipping) {
 			cycle += 2;
@@ -597,8 +597,8 @@ public class Dcpu {
 	}
 
 	private void iflOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		int source = USHORT_MASK & decodeValue(ai, true);
+		int target = USHORT_MASK & decodeValue(bi, false);
 
 		if (!isSkipping) {
 			cycle += 2;
@@ -610,8 +610,8 @@ public class Dcpu {
 	}
 
 	private void ifaOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		short source = (short) decodeValue(ai, true);
+		short target = (short) decodeValue(bi, false);
 
 		if (!isSkipping) {
 			cycle += 2;
@@ -622,8 +622,8 @@ public class Dcpu {
 	}
 
 	private void ifgOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		int source = USHORT_MASK & decodeValue(ai, true);
+		int target = USHORT_MASK & decodeValue(bi, false);
 
 		if (!isSkipping) {
 			cycle += 2;
@@ -635,8 +635,8 @@ public class Dcpu {
 	}
 
 	private void ifnOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		int source = USHORT_MASK & decodeValue(ai, true);
+		int target = USHORT_MASK & decodeValue(bi, false);
 
 		if (!isSkipping) {
 			cycle += 2;
@@ -647,8 +647,8 @@ public class Dcpu {
 	}
 
 	private void ifeOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		int source = USHORT_MASK & decodeValue(ai, true);
+		int target = USHORT_MASK & decodeValue(bi, false);
 
 		if (!isSkipping) {
 			cycle += 2;
@@ -659,8 +659,8 @@ public class Dcpu {
 	}
 
 	private void ifcOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		int source = USHORT_MASK & decodeValue(ai, true);
+		int target = USHORT_MASK & decodeValue(bi, false);
 
 		if (!isSkipping) {
 			cycle += 2;
@@ -672,8 +672,8 @@ public class Dcpu {
 	}
 
 	private void ifbOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		int source = USHORT_MASK & decodeValue(ai, true);
+		int target = USHORT_MASK & decodeValue(bi, false);
 
 		if (!isSkipping) {
 			cycle += 2;
@@ -688,19 +688,19 @@ public class Dcpu {
 		int source = decodeValue(ai, true);
 		int target = decodeValue(bi, false);
 
-		target = target << source;
-		if (doWrite(target)) {
-			ex = (target << source) >> 16;
+		int tg = target << source;
+		if (doWrite(USHORT_MASK & tg)) {
+			ex = ((target << source) >> 16) & USHORT_MASK;
 			cycle++;
 		}
 	}
 
 	private void asrOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		short source = (short) decodeValue(ai, true);
+		short target = (short) decodeValue(bi, false);
 
-		target = target >> source;
-		if (doWrite(target)) {
+		short tg = (short) ((USHORT_MASK & target) >> source);
+		if (doWrite(tg)) {
 			ex = ((target << 16) >>> source) & USHORT_MASK;
 			cycle++;
 		}  
@@ -711,8 +711,8 @@ public class Dcpu {
 		int source = decodeValue(ai, true);
 		int target = decodeValue(bi, false);
 
-		target = target >>> source;
-		if (doWrite(target)) {
+		int tg = target >>> source;
+		if (doWrite(USHORT_MASK & tg)) {
 			ex = ((target << 16) >> source) & USHORT_MASK;
 			cycle++;
 		}  
@@ -723,7 +723,7 @@ public class Dcpu {
 		int target = decodeValue(bi, false);
 
 		target = target ^ source;
-		if (doWrite(target)) cycle++;
+		if (doWrite(USHORT_MASK & target)) cycle++;
 	}
 
 	private void borOp(byte bi, byte ai) {
@@ -731,7 +731,7 @@ public class Dcpu {
 		int target = decodeValue(bi, false);
 		
 		target = target | source;
-		if (doWrite(target)) cycle++;
+		if (doWrite(USHORT_MASK & target)) cycle++;
 	}
 
 	private void andOp(byte bi, byte ai) {
@@ -739,19 +739,19 @@ public class Dcpu {
 		int target = decodeValue(bi, false);
 
 		target = target & source;
-		if (doWrite(target)) cycle++;
+		if (doWrite(USHORT_MASK & target)) cycle++;
 	}
 
 	private void mdiOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		short source = (short) decodeValue(ai, true);
+		short target = (short) decodeValue(bi, false);
 
 		if (source != 0 ) {
-			target = target % source;
+			target = (short) (target % source);
 		} else {
 			target = 0;
 		}
-		if (doWrite((int) target)) cycle += 3;
+		if (doWrite(USHORT_MASK & target)) cycle += 3;
 	}
 
 	private void modOp(byte bi, byte ai) {
@@ -764,16 +764,16 @@ public class Dcpu {
 			target = 0;
 		}
 		
-		if (doWrite((int) target)) cycle += 3;
+		if (doWrite(USHORT_MASK & target)) cycle += 3;
 	}
 
 	private void dviOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		short source = (short) decodeValue(ai, true);
+		short target = (short) decodeValue(bi, false);
 
 		if (target != 0) {  
-			target = target / source;
-			if (doWrite(target)) {
+			short tg = (short) (target / source);
+			if (doWrite(USHORT_MASK & tg)) {
 				ex = ((target << 16) / source) & USHORT_MASK;
 				cycle += 3;
 			} 
@@ -790,15 +790,15 @@ public class Dcpu {
 		int source = decodeValue(ai, true);
 		int target = decodeValue(bi, false);
 
-		if (target != 0) {  
-			target = (USHORT_MASK & target) / (USHORT_MASK & source);
-			if (doWrite(target)) {
+		if (source != 0) {  
+			int tg = (USHORT_MASK & target) / (USHORT_MASK & source);
+			if (doWrite(USHORT_MASK & tg)) {
 				ex = ((target << 16) / source) & USHORT_MASK;
 				cycle += 3;
 			} 
 
 		} else {
-			if (doWrite((int) 0)) {
+			if (doWrite(0)) {
 				ex = 0;
 				cycle += 3;
 			} 
@@ -806,11 +806,11 @@ public class Dcpu {
 	}
 
 	private void mliOp(byte bi, byte ai) {
-		int source = decodeValue(ai, true);
-		int target = decodeValue(bi, false);
+		short source = (short) decodeValue(ai, true);
+		short target = (short) decodeValue(bi, false);
 
-		target = target * source;
-		if (doWrite(target)) {
+		short tg = (short) (target * source);
+		if (doWrite(USHORT_MASK & tg)) {
 			ex = ((target * source) >> 16) & USHORT_MASK; 
 			cycle += 2;
 		}  
@@ -821,8 +821,8 @@ public class Dcpu {
 		int source = decodeValue(ai, true);
 		int target = decodeValue(bi, false);
 
-		target = (USHORT_MASK & target) * (USHORT_MASK & source);
-		if (doWrite(target)) {
+		int tg = (USHORT_MASK & target) * (USHORT_MASK & source);
+		if (doWrite(tg)) {
 			ex = ((target * source) >> 16) & USHORT_MASK; 
 		    cycle += 2;
 		}  
@@ -836,7 +836,7 @@ public class Dcpu {
 
 		target -= USHORT_MASK & source;
 		if (doWrite((int) (USHORT_MASK & target))) {
-			if (target > USHORT_MASK) ex = -1; // 0xFFFF;
+			if (target < 0) ex = -1; 
 			else ex = 0;
 			cycle += 2;
 		}  
@@ -860,7 +860,7 @@ public class Dcpu {
 		int source = decodeValue(ai, true);
 		int target = decodeValue(bi, false);
         		
-		target = source;
+		target = USHORT_MASK & source;
 		if (doWrite(target)) cycle++;
 	}
 

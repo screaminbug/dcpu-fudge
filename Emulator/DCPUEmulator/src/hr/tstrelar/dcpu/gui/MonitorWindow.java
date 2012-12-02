@@ -69,8 +69,8 @@ public class MonitorWindow extends JFrame {
 	public MonitorWindow() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
-		setName(monitor.getFriendlyName());
-		setTitle(monitor.getFriendlyName());
+		setName(monitor.toString());
+		setTitle(monitor.toString());
 					
 		drawSurface.add(bootMsg);
 		add(drawSurface);

@@ -72,7 +72,7 @@ public class GenericClock extends Device {
 	}
 
 	@Override
-	public String getFriendlyName() {
+	public String toString() {
 		return("Generic Clock");
 	}
 

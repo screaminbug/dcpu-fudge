@@ -11,7 +11,6 @@ public class GenericKeyboard extends Keyboard {
 	
 	private Queue<Short> buffer = new ArrayDeque<>();
 	private Integer intMessage;
-	private boolean repeatedKey;
 	
 	public GenericKeyboard(Dcpu dcpu) {
 		super(dcpu);
@@ -56,7 +55,6 @@ public class GenericKeyboard extends Keyboard {
 			if (getProcessor().gpRegs[1] != 0) {
 				intMessage = getProcessor().gpRegs[1];
 			} else intMessage = null;
-			break;
 			
 		}
 
@@ -78,7 +76,7 @@ public class GenericKeyboard extends Keyboard {
 	public void handleKeyDown(KeyEvent keyEvent) {
 		//if (!repeatedKey) {// && keyEvent.getKeyCode() != KeyEvent.VK_UNDEFINED) {
 			handleKey(decodeKeyCode(keyEvent));
-			repeatedKey = true;
+//			repeatedKey = true;
 		//}
 				
 	}
@@ -86,7 +84,7 @@ public class GenericKeyboard extends Keyboard {
 	public void handleKeyUp(KeyEvent keyEvent) {
 		//if (repeatedKey) {
 			//handleKey(decodeKeyCode(keyEvent));
-			repeatedKey = false;
+//			repeatedKey = false;
 		//}
 		
 	}
@@ -154,7 +152,7 @@ public class GenericKeyboard extends Keyboard {
 
 
 	@Override
-	public String getFriendlyName() {
+	public String toString() {
 		return("Generic Keyboard");
 	}
 

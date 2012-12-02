@@ -28,8 +28,8 @@ public class KeyboardWindow extends JFrame {
 	private KeyboardWindow(final Keyboard keyboard) {
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setSize(320, 200);
-		setName(keyboard.getFriendlyName());
-		setTitle(keyboard.getFriendlyName());
+		setName(keyboard.toString());
+		setTitle(keyboard.toString());
 		addKeyListener(new KeyListener() {
 			
 			@Override
